@@ -1,0 +1,25 @@
+{
+  "name": "spendbot",
+  "version": "1.0.0",
+  "description": "Telegram bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sayron97/SpendBot.git"
+  },
+  "author": "alex",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sayron97/SpendBot/issues"
+  },
+  "homepage": "https://github.com/sayron97/SpendBot#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "express.js": "^1.0.0",
+    "mongodb": "^3.6.0",
+    "node-telegram-bot-api": "^0.50.0"
+  }
+}
