@@ -1,6 +1,5 @@
 const config = require("./config/env");
 const lang = require("./config/lang");
-const mongo = require('mongodb').MongoClient;
 const TelegramBot = require('node-telegram-bot-api');
 const token = config.getConfig('tg_api_key');
 const MongoClient = require('mongodb').MongoClient;
@@ -8,48 +7,47 @@ const mongo_db_url = config.getConfig('mongo_db');
 
 MongoClient.connect(mongo_db_url, function (err, connection) {
     if (err) throw err;
-    var db = connection.db("spending_bot");
+    let db = connection.db("spending_bot");
 
-    var bot = new TelegramBot(token, {polling: true});
+    let bot = new TelegramBot(token, {polling: true});
 
     bot.onText(/\/start/, function (msg, match) {
-        newQuestion(msg);
+        getQuestion(msg);
     });
 
     bot.on('callback_query', function (msg) {
-        console.log(msg);
-        var answer = msg.data.split('_');
-        var index = answer[0];
-        var button = answer[1];
-
-
+        getQuestion(msg);
 //    bot.answerCallbackQuery(msg.id, 'Вы выбрали: '+ msg.data, true);
-        newQuestion(msg);
     });
 
 // THE END. MUDA-MUDA-MUDA-MUDAAAAAA
 
     function getQuestion(msg) {
+        let search_value;
+        if (typeof msg.data === "undefined") {
+             search_value = msg.text;
+        } else {
+             search_value = msg.data;
+        }
 
+        db.collection("blocks").find({address: search_value}).each(function (err, doc) {
+            if (doc !== null) {
 
-        let data;
-        data = db.collection("blocks").find({}, { address:"/start" }).toArray(function(err, result) {
-            if (err) throw err;
+                if (typeof doc['type'] !== "undefined") {
+
+                }
+
+                let text = doc['title'];
+                let options = {
+                    reply_markup: JSON.stringify({
+                        inline_keyboard: doc['buttons'],
+                        parse_mode: 'Markdown'
+                    })
+                };
+
+                chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+                bot.sendMessage(chat, text, options);
+            }
         });
-
-        console.log(data);
-    }
-
-    function newQuestion(msg) {
-        var arr = getQuestion(msg);
-        var text = arr.title;
-        var options = {
-            reply_markup: JSON.stringify({
-                inline_keyboard: arr.buttons,
-                parse_mode: 'Markdown'
-            })
-        };
-        chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
-        bot.sendMessage(chat, text, options);
     }
 });
