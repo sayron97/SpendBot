@@ -19,6 +19,18 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         getQuestion(msg);
     });
 
+    bot.onText(/\/add_product (.+)/, (msg, match) => {
+        db.collection('products').update({text:match[1]}, {text:match[1], callback_data:match[1]},  { upsert: true }, function (err, res) {
+            if (err) throw err;
+
+            let response = 'Добавлено!';
+            if(res.result.nModified){
+                response = 'Обновлено!';
+            }
+            bot.sendMessage(msg.chat.id, response);
+        });
+    });
+
     bot.on('callback_query', function (msg) {
         getQuestion(msg);
 //    bot.answerCallbackQuery(msg.id, 'Вы выбрали: '+ msg.data, true);
@@ -46,7 +58,6 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
 
     function getOptions(doc, msg)
     {
-        console.log(msg);
         let text = doc['title'];
         let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
 
@@ -54,6 +65,9 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             case 'enter_text':
                 bot.sendMessage(chat, text, getEnterTextOption())
                     .then(function(sended) {
+                        /*switch (sended['text']) {
+                            case ''
+                        }*/
                         bot.onReplyToMessage(chat, sended.message_id, function (message) {
                             sendProductList(message.text, msg)
                         });
@@ -62,7 +76,16 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             case 'choose':
                 break;
             default:  //buttons type
-                bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
+                switch (doc.address) {
+                    case 'enter_first_letter':
+                        db.collection("products").find({}).toArray(function (err, res) {
+                            bot.sendMessage(chat, text, getButtonOptions([res]));
+                        });
+                        break;
+                    default:
+                        bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
+                }
+          //      bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
         }
     }
 

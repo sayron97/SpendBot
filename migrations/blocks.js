@@ -50,9 +50,10 @@ exports.getBlocks = data => {
         {
             _id: 5,
             address:'enter_first_letter',
-            title: 'Введите первые буквы покупки',
+            title: 'Выберите продукт',
             parent_button: ['spends'],
-            type: 'enter_text'
+            buttons: [],
+            type: 'buttons'
         },
         {
             _id: 6,
@@ -73,7 +74,19 @@ exports.getBlocks = data => {
             address:'new_product',
             title: 'Название продукта /пробел/ цена',
             parent_button: ['enter_first_letter'],
+            callback_data: 'entering_new_product',
             type: 'enter_text'
+        },
+        {
+            _id: 9,
+            address:'new_product_done',
+            title: 'Готово!',
+            parent_button: ['new_product'],
+            buttons: [
+                [{ text: 'Искать в словаре', callback_data: 'search_words'}],
+                [{ text: 'Ввести новое слово', callback_data: 'enter_next_word'}],
+            ],
+            type: 'choose'
         },
     ];
 }
