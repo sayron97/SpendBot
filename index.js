@@ -31,7 +31,6 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
 
     bot.on('callback_query', function (msg) {
         getQuestion(msg);
-//    bot.answerCallbackQuery(msg.id, 'Вы выбрали: '+ msg.data, true);
     });
 
 // THE WORLD!!!. MUDA-MUDA-MUDA-MUDAAAAAA
@@ -40,14 +39,12 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
 
 
     function getQuestion(msg) {
-        let search_value;
+        let search_value = msg.data;
         if (typeof msg.data === "undefined") {
              search_value = msg.text;
-        } else {
-             search_value = msg.data;
         }
 
-        switch(search_value) {
+        switch(search_value) {     //Redirects
             case 'add_more':
                 search_value = 'enter_first_letter'
                 break;
@@ -60,7 +57,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             default:
         }
 
-        if (typeof msg.message !== "undefined") {
+        if (typeof msg.message !== "undefined") {    //Post data
             switch (msg.message.text) {
                 case 'Период времени':
                     sentStatistic(msg.data, msg.from.id);
@@ -111,15 +108,15 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
         bot.sendMessage(chat, 'Введите сумму покупки для '+msg.data, getEnterTextOption())
             .then(addApiId => {
-                bot.onReplyToMessage(addApiId.chat.id, addApiId.message_id, msg => {
-                    let productName = msg.reply_to_message.text.split(' ');
-                    productName = productName.slice(-1)[0];
+                bot.onReplyToMessage(addApiId.chat.id, addApiId.message_id, ({reply_to_message, from: {id},text}) => {
+                    const [productName] = reply_to_message.text.split(' ').slice(-1)[0];
 
-                    db.collection("spends").insert({
-                        'user_id': msg.from.id,
-                        'product_name': productName,
-                        'amount': msg.text,
-                        'date': new Date()
+                    db.collection("spends")
+                        .insert({
+                            productName,
+                            'user_id': id,
+                            'amount': text,
+                            'date': new Date()
                     })
                         .then(response => {
                             bot.sendMessage(chat, 'Готово!', getButtonOptions(block_after_new_spend))
@@ -138,19 +135,34 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                 bot.sendMessage(chat, text, getEnterTextOption())
                     .then(function(sended) {
                         bot.onReplyToMessage(chat, sended.message_id, function (message) {
-                            sendProductList(message.text, msg)
+                            switch (message.reply_to_message.text){
+                                case 'Введите название продукта':
+                                    db.collection('products').update({text:message.text}, {text:message.text, callback_data:message.text},  { upsert: true }, function (err, res) {
+                                        if (err) throw err;
+
+                                        let response = 'Добавлено!';
+                                        if(res.result.nModified){
+                                            response = 'Обновлено!';
+                                        }
+                                        bot.sendMessage(chat, response, getButtonOptions(block_after_new_spend));
+                                    });
+                                    break
+                                default:
+                                    sendProductList(message.text, msg)
+                            }
                         });
                     })
                 break;
-            case 'choose':
-                break;
-            default:  //buttons type
-                switch (doc.address) {
+
+                default:  //buttons type
+                    switch (doc.address) {
                     case 'enter_first_letter':
                         db.collection("products").find({}).toArray(function (err, res) {
                             bot.sendMessage(chat, text, getButtonOptions([res]));
                         });
                         break;
+                        case 'add_new_product':
+                            console.log(msg);
                     default:
                         bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
                 }

@@ -16,6 +16,7 @@ exports.getBlocks = data => {
             address: 'spends',
             title:'Меню трат',
             buttons: [
+                [{ text: 'Добавить продукт', callback_data: 'add_new_product'}],
                 [{ text: 'Записать трату', callback_data: 'enter_first_letter'}],
                 [{ text: 'Вывести статистику', callback_data: 'period'}]
             ],
@@ -71,10 +72,10 @@ exports.getBlocks = data => {
         },
         {
             _id: 8,
-            address:'new_product',
-            title: 'Название продукта /пробел/ цена',
-            parent_button: ['enter_first_letter'],
-            callback_data: 'entering_new_product',
+            address:'add_new_product',
+            title: 'Введите название продукта',
+            parent_button: ['spends'],
+            callback_data: 'add_new_product',
             type: 'enter_text'
         },
         {
