@@ -56,17 +56,53 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                 break;
             case 'back' :
                 search_value = 'spends'
+                break;
             default:
         }
 
-        if (msg.message.text === 'Выберите продукт') {
-            addNewProduct(msg);
+        if (typeof msg.message !== "undefined") {
+            switch (msg.message.text) {
+                case 'Период времени':
+                    sentStatistic(msg.data, msg.from.id);
+                    break;
+                case 'Выберите продукт':
+                    addNewProduct(msg);
+                    break;
+                default:
+            }
         }
 
         db.collection("blocks").find({address: search_value}).each(function (err, doc) {
             if (doc !== null) {
                 getOptions(doc, msg);
             }
+        });
+    }
+
+    function sentStatistic(days, user_id)
+    {
+        let now = new Date();
+        let lastDate = new Date(new Date().setDate(new Date().getDate()-days));
+        db.collection('spends').find({"date":{ $gte:lastDate, $lt:now }, "user_id": user_id})
+            .toArray(function (err, doc) {
+                let productList = [];
+                doc.forEach(spend => {
+                    if (!isNaN(+spend['amount'])) {
+                        if (productList[spend['product_name']] === undefined) {
+                            productList[spend['product_name']] = +spend['amount'];
+                        } else {
+                            productList[spend['product_name']] = +productList[spend['product_name']] + +spend['amount'];
+                        }
+                    }
+                })
+
+                let response = '';
+
+                for (let key in productList) {
+                        response += key + '  -  '+ productList[key] +'\n'
+                }
+
+                bot.sendMessage(user_id, response, getButtonOptions(block_after_new_spend))
         });
     }
 
