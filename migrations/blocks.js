@@ -97,3 +97,9 @@ exports.newProductButton = data => {
     ]
 }
 
+exports.blockAfterNewSpend = data => {
+    return [
+        [ { text: 'Добавить еще', callback_data: 'add_more' } ],
+        [{ text: 'Назад', callback_data: 'back'}]
+    ]
+}

@@ -5,9 +5,7 @@ const token = config.getConfig('tg_api_key');
 const MongoClient = require('mongodb').MongoClient;
 const mongo_db_url = config.getConfig('mongo_db');
 const new_product_button = require("./migrations/blocks").newProductButton();
-
-
-
+const block_after_new_spend = require("./migrations/blocks").blockAfterNewSpend();
 
 MongoClient.connect(mongo_db_url, function (err, connection) {
     if (err) throw err;
@@ -49,11 +47,49 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
              search_value = msg.data;
         }
 
+        switch(search_value) {
+            case 'add_more':
+                search_value = 'enter_first_letter'
+                break;
+            case 'spends':
+                search_value = 'spends'
+                break;
+            case 'back' :
+                search_value = 'spends'
+            default:
+        }
+
+        if (msg.message.text === 'Выберите продукт') {
+            addNewProduct(msg);
+        }
+
         db.collection("blocks").find({address: search_value}).each(function (err, doc) {
             if (doc !== null) {
                 getOptions(doc, msg);
             }
         });
+    }
+
+    function addNewProduct(msg)
+    {
+        let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
+        bot.sendMessage(chat, 'Введите сумму покупки для '+msg.data, getEnterTextOption())
+            .then(addApiId => {
+                bot.onReplyToMessage(addApiId.chat.id, addApiId.message_id, msg => {
+                    let productName = msg.reply_to_message.text.split(' ');
+                    productName = productName.slice(-1)[0];
+
+                    db.collection("spends").insert({
+                        'user_id': msg.from.id,
+                        'product_name': productName,
+                        'amount': msg.text,
+                        'date': new Date()
+                    })
+                        .then(response => {
+                            bot.sendMessage(chat, 'Готово!', getButtonOptions(block_after_new_spend))
+                        })
+                })
+            })
     }
 
     function getOptions(doc, msg)
@@ -65,9 +101,6 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             case 'enter_text':
                 bot.sendMessage(chat, text, getEnterTextOption())
                     .then(function(sended) {
-                        /*switch (sended['text']) {
-                            case ''
-                        }*/
                         bot.onReplyToMessage(chat, sended.message_id, function (message) {
                             sendProductList(message.text, msg)
                         });
@@ -103,7 +136,8 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
     {
         return {
             reply_markup: JSON.stringify({ force_reply: true }
-            )};
+            ),
+        };
     }
 
     function getChooseOption()
