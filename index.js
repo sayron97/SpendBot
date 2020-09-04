@@ -9,7 +9,7 @@ const new_product_button = require("./migrations/blocks").newProductButton();
 const block_after_new_spend = require("./migrations/blocks").blockAfterNewSpend();
 
 const tesseract_config = {
-    lang: "rus",
+    lang: "eng",
     oem: 1,
     psm: 3,
 }
