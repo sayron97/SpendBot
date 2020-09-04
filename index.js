@@ -175,7 +175,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             console.log(link)
             tesseract.recognize(link, tesseract_config)
                 .then(text => {
-                    console.log("Result:", text)
+                    bot.sendMessage(chat, text);
                 })
                 .catch(error => {
                     console.log(error.message)
