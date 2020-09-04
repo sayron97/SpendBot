@@ -18,6 +18,7 @@ exports.getBlocks = data => {
             buttons: [
                 [{ text: 'Добавить продукт', callback_data: 'add_new_product'}],
                 [{ text: 'Записать трату', callback_data: 'enter_first_letter'}],
+                [{ text: 'Фото чека', callback_data: 'tab_photo'}],
                 [{ text: 'Вывести статистику', callback_data: 'period'}]
             ],
             type: 'buttons',
@@ -88,6 +89,14 @@ exports.getBlocks = data => {
                 [{ text: 'Ввести новое слово', callback_data: 'enter_next_word'}],
             ],
             type: 'choose'
+        },
+        {
+            _id: 10,
+            address:'tab_photo',
+            title: 'Пришлите фото чека',
+            parent_button: ['spends'],
+            callback_data: 'tab_photo',
+            type: 'enter_text'
         },
     ];
 }

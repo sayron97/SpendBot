@@ -1,3 +1,4 @@
+const tesseract = require("node-tesseract-ocr")
 const config = require("./config/env");
 const lang = require("./config/lang");
 const TelegramBot = require('node-telegram-bot-api');
@@ -6,6 +7,12 @@ const MongoClient = require('mongodb').MongoClient;
 const mongo_db_url = config.getConfig('mongo_db');
 const new_product_button = require("./migrations/blocks").newProductButton();
 const block_after_new_spend = require("./migrations/blocks").blockAfterNewSpend();
+
+const tesseract_config = {
+    lang: "rus",
+    oem: 1,
+    psm: 3,
+}
 
 MongoClient.connect(mongo_db_url, function (err, connection) {
     if (err) throw err;
@@ -57,6 +64,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             default:
         }
 
+
         if (typeof msg.message !== "undefined") {
             switch (msg.message.text) {
                 case 'Период времени':
@@ -76,8 +84,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         });
     }
 
-    function sentStatistic(days, user_id)
-    {
+    function sentStatistic(days, user_id) {
         let now = new Date();
         let lastDate = new Date(new Date().setDate(new Date().getDate()-days));
         db.collection('spends').find({"date":{ $gte:lastDate, $lt:now }, "user_id": user_id})
@@ -85,7 +92,6 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                 let productList = [];
                 doc.forEach(spend => {
                     if (!isNaN(+spend['amount'])) {
-                        console.log(spend);
                         if (productList[spend['product_name']] === undefined) {
                             productList[spend['product_name']] = +spend['amount'];
                         } else {
@@ -104,8 +110,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         });
     }
 
-    function addNewProduct(msg)
-    {
+    function addNewProduct(msg) {
         let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
         bot.sendMessage(chat, 'Введите сумму покупки для '+msg.data, getEnterTextOption())
             .then(addApiId => {
@@ -125,19 +130,22 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             })
     }
 
-    function getOptions(doc, msg)   //Choose type of block and fire event
-    {
+    function getOptions(doc, msg) {   //Choose type of block and fire event
         let text = doc['title'];
         let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
 
         switch (doc['type']) {
             case 'enter_text':
+
                 bot.sendMessage(chat, text, getEnterTextOption())
                     .then(function(sended) {
                         bot.onReplyToMessage(chat, sended.message_id, function (message) {
                             switch (message.reply_to_message.text){
                                 case 'Введите название продукта':
                                     postNewProduct(chat, message)
+                                    break
+                                case 'Пришлите фото чека':
+                                    postNewTab(chat, message)
                                     break
                                 default:
                             }
@@ -160,8 +168,23 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         }
     }
 
-    function postNewProduct(chat, message)
-    {
+
+    function postNewTab(chat, message) {
+        let photos = message.photo;
+        const image =  bot.downloadFile(photos[0].file_id, 'images').then(link => {
+            console.log(link)
+            tesseract.recognize(link, tesseract_config)
+                .then(text => {
+                    console.log("Result:", text)
+                })
+                .catch(error => {
+                    console.log(error.message)
+                })
+        });
+      //  console.log(image);
+    }
+
+    function postNewProduct(chat, message) {
         db.collection('products').update({text:message.text}, {text:message.text, callback_data:message.text},  { upsert: true }, function (err, res) {
             if (err) throw err;
 

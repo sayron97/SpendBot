@@ -20,6 +20,8 @@
     "express": "^4.17.1",
     "express.js": "^1.0.0",
     "mongodb": "^3.6.0",
-    "node-telegram-bot-api": "^0.50.0"
+    "node-telegram-bot-api": "^0.50.0",
+    "node-tesseract-ocr": "^2.0.0",
+    "tesseract.js": "^2.1.1"
   }
 }
