@@ -57,7 +57,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             default:
         }
 
-        if (typeof msg.message !== "undefined") {    //Post data
+        if (typeof msg.message !== "undefined") {
             switch (msg.message.text) {
                 case 'Период времени':
                     sentStatistic(msg.data, msg.from.id);
@@ -85,6 +85,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                 let productList = [];
                 doc.forEach(spend => {
                     if (!isNaN(+spend['amount'])) {
+                        console.log(spend);
                         if (productList[spend['product_name']] === undefined) {
                             productList[spend['product_name']] = +spend['amount'];
                         } else {
@@ -109,11 +110,10 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         bot.sendMessage(chat, 'Введите сумму покупки для '+msg.data, getEnterTextOption())
             .then(addApiId => {
                 bot.onReplyToMessage(addApiId.chat.id, addApiId.message_id, ({reply_to_message, from: {id},text}) => {
-                    const [productName] = reply_to_message.text.split(' ').slice(-1)[0];
-
+                    const [product_name] = reply_to_message.text.split('Введите сумму покупки для ').slice(1);
                     db.collection("spends")
                         .insert({
-                            productName,
+                            product_name,
                             'user_id': id,
                             'amount': text,
                             'date': new Date()
@@ -125,7 +125,7 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
             })
     }
 
-    function getOptions(doc, msg)
+    function getOptions(doc, msg)   //Choose type of block and fire event
     {
         let text = doc['title'];
         let chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
@@ -137,18 +137,9 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                         bot.onReplyToMessage(chat, sended.message_id, function (message) {
                             switch (message.reply_to_message.text){
                                 case 'Введите название продукта':
-                                    db.collection('products').update({text:message.text}, {text:message.text, callback_data:message.text},  { upsert: true }, function (err, res) {
-                                        if (err) throw err;
-
-                                        let response = 'Добавлено!';
-                                        if(res.result.nModified){
-                                            response = 'Обновлено!';
-                                        }
-                                        bot.sendMessage(chat, response, getButtonOptions(block_after_new_spend));
-                                    });
+                                    postNewProduct(chat, message)
                                     break
                                 default:
-                                    sendProductList(message.text, msg)
                             }
                         });
                     })
@@ -158,20 +149,31 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
                     switch (doc.address) {
                     case 'enter_first_letter':
                         db.collection("products").find({}).toArray(function (err, res) {
-                            bot.sendMessage(chat, text, getButtonOptions([res]));
+                            let arr = [];
+                            res.forEach(element => {arr.push([element])})
+                            bot.sendMessage(chat, text, getButtonOptions(arr));
                         });
                         break;
-                        case 'add_new_product':
-                            console.log(msg);
                     default:
                         bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
                 }
-          //      bot.sendMessage(chat, text, getButtonOptions(doc['buttons']));
         }
     }
 
-    function getButtonOptions(buttons)
+    function postNewProduct(chat, message)
     {
+        db.collection('products').update({text:message.text}, {text:message.text, callback_data:message.text},  { upsert: true }, function (err, res) {
+            if (err) throw err;
+
+            let response = 'Добавлено!';
+            if(res.result.nModified){
+                response = 'Обновлено!';
+            }
+            bot.sendMessage(chat, response, getButtonOptions(block_after_new_spend));
+        });
+    }
+
+    function getButtonOptions(buttons) {
         return {
             reply_markup: JSON.stringify({
                 inline_keyboard: buttons,
@@ -180,30 +182,10 @@ MongoClient.connect(mongo_db_url, function (err, connection) {
         };
     }
 
-    function getEnterTextOption()
-    {
+    function getEnterTextOption() {
         return {
             reply_markup: JSON.stringify({ force_reply: true }
             ),
         };
-    }
-
-    function getChooseOption()
-    {
-
-    }
-
-    function sendProductList(product_str, msg)
-    {
-        db.collection("product_list").find({name: "/"+product_str+"/"}).each(function (err, doc) {
-            let new_doc = [];
-            if (doc == null) {
-                new_doc['title'] = 'Выбор продукта';
-                new_doc['type'] = 'button';
-                new_doc['buttons'] = new_product_button
-            }
-
-            getOptions(new_doc, msg);
-        });
     }
 });
